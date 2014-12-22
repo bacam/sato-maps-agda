@@ -229,6 +229,21 @@ mutual
     dmapp : {m n : 𝕄}{M N : 𝕃} -> m ∣ M -> n ∣ N -> mapp m n ∣ app M N
     dmask : {m n : 𝕄}{N : 𝕃} -> m ∣ N -> (ndiv : n ∣ N) -> .(m ⊥ n) -> m ∣ mask n N ndiv
 
+mutual
+  dmappunique : forall {M N m0 m n} -> (y : m0 ∣ app M N) -> m0 == mapp m n -> (d1 : m ∣ M) -> (d2 : n ∣ N) -> dmapp d1 d2 === y
+  dmappunique {M}{N}{._}{m'}{n'} (dmapp {m}{n} y y₁) e d1 d2 with mappeql {m}{n}{m'}{n'} e | mappeqr {m}{n}{m'}{n'} e
+  dmappunique (dmapp y y₁) e d1 d2 | refl | refl with ∣unique d1 y | ∣unique d2 y₁
+  dmappunique (dmapp y y₁) e .y .y₁ | refl | refl | refl | refl = refll
+
+  ∣unique : forall {m M} -> (x y : m ∣ M) -> x == y
+  ∣unique (zv x) (zv .x) = refl
+  ∣unique zb zb = refl
+  ∣unique ob ob = refl
+  ∣unique (dmapp x x₁) y with dmappunique y refl x x₁
+  ∣unique (dmapp x x₁) .(dmapp x x₁) | refll = refl
+  ∣unique (dmask x x₁ x₂) (dmask y .x₁ x₃) with ∣unique x y
+  ∣unique (dmask x x₁ x₂) (dmask .x .x₁ x₃) | refl = refl
+
 zeromask : (M : 𝕃) -> zero ∣ M
 zeromask (var x)      = zv x
 zeromask □            = zb
@@ -292,14 +307,16 @@ mapskel x □ = zb
 mapskel x (app M N) = dmapp (mapskel x M) (mapskel x N)
 mapskel x (mask m M d) = dmask (mapskel x M) (skelok d) (mapdiv⊥ x d)
 
-masksubst : forall {m M M'} -> (d : m ∣ M)(d' : m ∣ M') -> M == M' -> d === d' -> mask m M d == mask m M' d'
-masksubst d .d refl refll = refl
+masksubst : forall {m M M'} -> (d : m ∣ M)(d' : m ∣ M') -> M == M' -> mask m M d == mask m M' d'
+masksubst d d' refl with ∣unique d d'
+masksubst d .d refl | refl = refl
 
 dmappsubst : forall {m n M N M' N'} -> (d1 : m ∣ M)(d2 : n ∣ N)(d1' : m ∣ M')(d2' : n ∣ N') -> M == M' -> N == N' -> d1 === d1' -> d2 === d2' -> dmapp d1 d2 === dmapp d1' d2'
 dmappsubst d1 d2 .d1 .d2 refl refl refll refll = refll
 
-dmasksubst : forall {m n N N'} -> .{or : m ⊥ n} -> {d1 : m ∣ N}{d2 : n ∣ N}{d1' : m ∣ N'}{d2' : n ∣ N'} -> N == N' -> d1 === d1' -> d2 === d2' -> dmask d1 d2 or === dmask d1' d2' or
-dmasksubst refl refll refll = refll
+dmasksubst : forall {m n N N'} -> .{or1 or2 : m ⊥ n} -> {d1 : m ∣ N}{d2 : n ∣ N}{d1' : m ∣ N'}{d2' : n ∣ N'} -> N == N' -> dmask d1 d2 or1 === dmask d1' d2' or2
+dmasksubst {m}{n}{N}{._}{_}{_}{d1}{d2}{d1'}{d2'} refl with ∣unique d1 d1' | ∣unique d2 d2'
+dmasksubst refl | refl | refl = refll
 
 mutual
   mapzeroskel : (x : 𝕏)(M : 𝕃) -> map x M == zero -> skel x M == M
@@ -310,8 +327,8 @@ mutual
   mapzeroskel x (app M N) e with mappeqzero (map x M) (map x N) e
   mapzeroskel x (app M N) e | e1 , e2 with mapzeroskel x M e1 | mapzeroskel x N e2
   mapzeroskel x (app M N) e | e1 , e2 | e3 | e4 = cong2 app e3 e4
-  mapzeroskel x (mask m M d) e with mapzeroskel x M e | mapzeroskelok x m M d e
-  mapzeroskel x (mask m M d) e | e1 | e2 = masksubst _ _ e1 e2
+  mapzeroskel x (mask m M d) e with mapzeroskel x M e
+  mapzeroskel x (mask m M d) e | e1 = masksubst _ _ e1
   
   mapzeroskelok : (x : 𝕏)(m : 𝕄)(M : 𝕃)(d : m ∣ M) -> map x M == zero -> skelok {x}{m}{M} d === d
   mapzeroskelok x .zero .(var y) (zv y) e with x =𝕏 y
@@ -323,7 +340,7 @@ mutual
   mapzeroskelok x ._ ._ (dmapp d1 d2) e | e1 , e2 with mapzeroskelok x _ _ d1 e1 | mapzeroskelok x _ _ d2 e2
   mapzeroskelok x ._ ._ (dmapp d1 d2) e | e1 , e2 | e3 | e4 = dmappsubst (skelok d1) (skelok d2) d1 d2 (mapzeroskel _ _ e1) (mapzeroskel _ _ e2) e3 e4
   mapzeroskelok x m ._ (dmask {.m}{n}{N} d1 d2 or) e with mapzeroskel x N e | mapzeroskelok x _ _ d1 e | mapzeroskelok x _ _ d2 e
-  mapzeroskelok x m ._ (dmask d1 d2 or) e | e1 | e2 | e3 = dmasksubst e1 e2 e3
+  mapzeroskelok x m ._ (dmask d1 d2 or) e | e1 | e2 | e3 = dmasksubst e1
 
 appinj : forall {M N M' N'} -> app M N == app M' N' -> (M == M') × (N == N')
 appinj refl = refl , refl
@@ -417,14 +434,14 @@ mutual
   fillzero (app M N) P d with dmappzero M N d
   fillzero (app M N) P .(dmapp d1 d2) | d1 , (d2 , refll) = cong2 app (fillzero M P d1) (fillzero N P d2)
   fillzero (mask m M x) P (dmask d .x or) with fillzero M P d
-  fillzero (mask m M d1) P (dmask d .d1 or) | e = masksubst _ _ e (fillokzero or d d1 e)
+  fillzero (mask m M d1) P (dmask d .d1 or) | e = masksubst _ _ e
 
   fillokzero : forall {M P m} -> .(or : zero ⊥ m) -> (d1 : zero ∣ M) -> (d2 : m ∣ M) -> fill d1 P == M -> fillok {m}{M}{P} zero d1 d2 or === d2
   fillokzero {var .x} or (zv x) e x₁ = refll
   fillokzero {□} or zb e x = refll
   fillokzero {app M N} or d e x with dmappzero M N d
   fillokzero {app M N}{P} or .(dmapp d1 d2) (dmapp d3 d4) x₃ | d1 , (d2 , refll) = dmappsubst _ _ _ _ (fillzero M P d1) (fillzero N P d2) (fillokzero _ d1 d3 (fillzero M P d1)) (fillokzero _ d2 d4 (fillzero N P d2))
-  fillokzero {mask n N .d'}{P} or (dmask d d' x) (dmask e .d' x₁) x₂ = dmasksubst (fillzero N P d) (fillokzero _ d e (fillzero N P d)) (fillokzero _ d d' (fillzero N P d))
+  fillokzero {mask n N .d'}{P} or (dmask d d' x) (dmask e .d' x₁) x₂ = dmasksubst (fillzero N P d)
   
 
 fillzeroeq : (m : 𝕄)(M M' P : 𝕃)(d : m ∣ M') -> m == zero -> M' == M -> fill d P == M
@@ -439,5 +456,5 @@ substskel x M P | e =  fillzeroeq _ _ _ P (mapskel x (skel x M)) e (skelidemp x 
 
 substlameq : (x : 𝕏)(M P : 𝕃) -> subst (lam x M) x P == lam x M
 substlameq x M P with substskel x M P
-substlameq x M P | e = {!!}
+substlameq x M P | e = masksubst _ _ e
 
