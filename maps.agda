@@ -348,6 +348,9 @@ appinj refl = refl , refl
 maskinj : forall {m M M' d d'} -> mask m M d == mask m M' d' -> M == M'
 maskinj refl = refl
 
+maskinj' : forall {m m' M M' d d'} -> mask m M d == mask m' M' d' -> (m == m') × (M == M')
+maskinj' refl = refl , refl
+
 skelmapzero : (x : 𝕏)(M : 𝕃) -> skel x M == M -> map x M == zero
 skelmapzero x (var y)  e with x =𝕏 y
 skelmapzero x (var .x) () | inl refl
@@ -369,8 +372,49 @@ subst M x N = fill (mapskel x M) N
 substdiv : forall {m M} -> (x : 𝕏)(P : 𝕃) -> m ∣ M -> m ∣ subst M x P
 substdiv {m}{M} x P d = fillok _ (mapskel x M) (skelok d) (mapdiv⊥ x d)
 
+
+masksubst' : forall {m m' M M'} -> (d : m ∣ M)(d' : m' ∣ M') -> m == m' -> M == M' -> mask m M d == mask m' M' d'
+masksubst' d d' refl refl with ∣unique d d'
+masksubst' d .d refl refl | refl = refl
+
+mapskelinj : forall {x M N} -> map x M == map x N -> skel x M == skel x N -> M == N
+mapskelinj {x} {var y} e1 e2 with x =𝕏 y
+mapskelinj {x} {var .x} {var y} e1 e2 | inl refl with x =𝕏 y
+mapskelinj {x} {var .x} {var .x} e1 e2 | inl refl | inl refl = refl
+mapskelinj {x} {var .x} {var y} e1 () | inl refl | inr x₁
+mapskelinj {x} {var .x} {□} () e2 | inl refl
+mapskelinj {x} {var .x} {app N N₁} e1 () | inl refl
+mapskelinj {x} {var .x} {mask m N x₁} e1 () | inl refl
+mapskelinj {x} {var y} {var z} e1 e2 | inr x₁ with x =𝕏 z
+mapskelinj {x} {var y} {var .x} e1 () | inr x₂ | inl refl
+mapskelinj {x} {var y} {var z} e1 e2 | inr x₂ | inr x₁ = e2
+mapskelinj {x} {var y} {□} e1 () | inr x₁
+mapskelinj {x} {var y} {app N N₁} e1 () | inr x₁
+mapskelinj {x} {var y} {mask m N x₂} e1 () | inr x₁
+mapskelinj {x} {M = □} {var y} e1 e2 with x =𝕏 y
+mapskelinj {x} {□} {var .x} () e2 | inl refl
+mapskelinj {x} {□} {var y} e1 () | inr x₁
+mapskelinj {M = □} {□} e1 e2 = refl
+mapskelinj {M = □} {app N N₁} e1 ()
+mapskelinj {M = □} {mask m N x₁} e1 ()
+mapskelinj {x} {M = app M N} {var y} e1 e2 with x =𝕏 y 
+mapskelinj {x} {app M N} {var .x} e1 () | inl refl
+mapskelinj {x} {app M N} {var y} e1 () | inr x₁
+mapskelinj {M = app M N} {□} e1 ()
+mapskelinj {x} {M = app M N} {app M' N'} e1 e2 with mappeq0 (map x M) (map x N) (map x M') (map x N') e1 | appinj e2
+mapskelinj {M = app M N} {app M' N'} e1 e2 | e3 , e4 | e5 , e6 = cong2 app (mapskelinj e3 e5) (mapskelinj e4 e6)
+mapskelinj {M = app M N} {mask m N₁ x₁} e1 ()
+mapskelinj {x}{M = mask m M x₁} {var y} e1 e2 with x =𝕏 y 
+mapskelinj {x} {mask m M x₂} {var .x} e1 () | inl refl
+mapskelinj {x} {mask m M x₂} {var y} e1 () | inr x₁
+mapskelinj {M = mask m M x₁} {□} e1 ()
+mapskelinj {M = mask m M x₁} {app N N₁} e1 ()
+mapskelinj {M = mask m M x₁} {mask m₁ N x₂} e1 e2 with maskinj' e2
+mapskelinj {M = mask m M x₁} {mask m₁ N x₂} e1 e2 | e3 , e4 = masksubst' _ _ e3 (mapskelinj e1 e4)
+
 lamrightinj : forall {x M N} -> lam x M == lam x N -> M == N
-lamrightinj e = {!!}
+lamrightinj e with maskinj' e
+lamrightinj e | e1 , e2 = mapskelinj e1 e2
 
 -- Prop 1
 
@@ -458,3 +502,85 @@ substlameq : (x : 𝕏)(M P : 𝕃) -> subst (lam x M) x P == lam x M
 substlameq x M P with substskel x M P
 substlameq x M P | e = masksubst _ _ e
 
+mappzero : {m n : 𝕄} -> m == zero -> n == zero -> mapp m n == zero
+mappzero refl refl = refl
+
+freshmap : (x : 𝕏)(M : 𝕃) -> x ♯ M -> map x M == zero
+freshmap x (var y) sh with x =𝕏 y
+freshmap x (var .x) () | inl refl
+freshmap x (var y) sh | inr _ = refl
+freshmap x □ sh = refl
+freshmap x (app M N) (fr1 , fr2) with freshmap x M fr1 | freshmap x N fr2
+freshmap x (app M N) (fr1 , fr2) | e1 | e2 = mappzero e1 e2
+freshmap x (mask m M _) fr = freshmap x M fr
+
+substfresh : (x : 𝕏)(M P : 𝕃) -> x ♯ M -> subst M x P == M
+substfresh x M P fr = fillzeroeq _ _ (skel x M) P (mapskel x M) (freshmap x M fr) (mapzeroskel x M (freshmap x M fr))
+
+freshskel : (x y : 𝕏)(M : 𝕃) -> x ♯ M -> x ♯ skel y M
+freshskel x y (var z) fr with y =𝕏 z
+freshskel x y (var .y) fr | inl refl = 〈〉
+freshskel x y (var z) fr | inr p = fr
+freshskel x y □ fr = 〈〉
+freshskel x y (app M N) (fr₁ , fr₂) = freshskel x y M fr₁ , freshskel x y N fr₂
+freshskel x y (mask m M _) fr = freshskel x y M fr
+
+substlamfr : (x y : 𝕏)(M P : 𝕃) -> x ♯ M -> subst (lam y M) x P == lam y M
+substlamfr x y M P fr = substfresh x (lam y M) P (freshskel x y M fr)
+
+-- typo in the paper
+strange : (x y z : 𝕏) -> ¬ (x == y) -> ¬ (y == z) -> ¬ ((M : 𝕃) -> lam y M == lam z (subst M x (var z)))
+strange x y z n1 n2 p with p (var y)
+strange x y z n1 n2 _ | q with y =𝕏 y | x =𝕏 y
+strange x .x z n1 n2 _ | q | inl refl | inl refl with n1 refl
+strange x .x z n1 n2 _ | q | inl refl | inl refl | ()
+strange x y z n1 n2 _ | q | inl refl | inr x₁ with z =𝕏 y
+strange x₁ y .y n1 n2 p | q | inl refl | inr x₂ | inl refl with n2 refl
+strange x₁ y .y n1 n2 p | q | inl refl | inr x₂ | inl refl | ()
+strange x₁ y z n1 n2 p | () | inl refl | inr x₂ | inr x 
+strange x y z n1 n2 _ | q | inr x₁ | _ with x₁ refl
+strange x y z n1 n2 _ | q | inr x₁ | _ | ()
+
+alphaskel : (y z : 𝕏) -> ¬ (y == z) -> (M : 𝕃) -> z ♯ M -> skel y M == skel z (subst M y (var z))
+alphaskel y z ne (var x) fr with x =𝕏 y | y =𝕏 x
+alphaskel y z ne (var .y) fr | inl refl | inl refl with z =𝕏 z
+alphaskel y z ne (var .y) fr | inl refl | inl refl | inl refl = refl
+alphaskel y z ne (var .y) fr | inl refl | inl refl | inr x with x refl
+alphaskel y z ne (var .y) fr | inl refl | inl refl | inr x | ()
+alphaskel y z ne (var .y) fr | inl refl | inr x₂ with x₂ refl
+alphaskel y z ne (var .y) fr | inl refl | inr x₂ | ()
+alphaskel y z ne (var .y) fr | inr x₁ | inl refl with z =𝕏 z
+alphaskel y z ne (var .y) fr | inr x₁ | inl refl | inl refl = refl
+alphaskel y z ne (var .y) fr | inr x₁ | inl refl | inr x with x refl
+alphaskel y z ne (var .y) fr | inr x₁ | inl refl | inr x | ()
+alphaskel y z ne (var x) fr | inr x₁ | inr x₂ with z =𝕏 x
+alphaskel y x ne (var .x) () | inr x₂ | inr x₃ | inl refl
+alphaskel y z ne (var x) fr | inr x₂ | inr x₃ | inr x₁ = refl
+alphaskel y z ne □ fr = refl
+alphaskel y z ne (app M N) (fr1 , fr2) with alphaskel y z ne M fr1 | alphaskel y z ne N fr2
+alphaskel y z ne (app M N) (fr1 , fr2) | e1 | e2 = cong2 app e1 e2
+alphaskel y z ne (mask m M d) fr = masksubst (skelok d) (skelok (fillok (map y M) (mapskel y M) (skelok d) (mapdiv⊥ y d))) (alphaskel y z ne M fr)
+
+alphamap : (y z : 𝕏) -> ¬ (y == z) -> (M : 𝕃) -> z ♯ M -> map y M == map z (subst M y (var z))
+alphamap y z ne (var x) fr with x =𝕏 y | y =𝕏 x
+alphamap y z ne (var .y) fr | inl refl | inl refl with z =𝕏 z
+alphamap y z ne (var .y) fr | inl refl | inl refl | inl refl = refl
+alphamap y z ne (var .y) fr | inl refl | inl refl | inr x with x refl
+alphamap y z ne (var .y) fr | inl refl | inl refl | inr x | ()
+alphamap y z ne (var .y) fr | inl refl | inr x₂ with x₂ refl
+alphamap y z ne (var .y) fr | inl refl | inr x₂ | ()
+alphamap y z ne (var .y) fr | inr x₁ | inl refl with z =𝕏 z
+alphamap y z ne (var .y) fr | inr x₁ | inl refl | inl refl = refl
+alphamap y z ne (var .y) fr | inr x₁ | inl refl | inr x with x refl
+alphamap y z ne (var .y) fr | inr x₁ | inl refl | inr x | ()
+alphamap y z ne (var x) fr | inr x₁ | inr x₂ with z =𝕏 x
+alphamap y x ne (var .x) () | inr x₂ | inr x₃ | inl refl
+alphamap y z ne (var x) fr | inr x₂ | inr x₃ | inr x₁ = refl
+alphamap y z ne □ fr = refl
+alphamap y z ne (app M N) (fr1 , fr2) with alphamap y z ne M fr1 | alphamap y z ne N fr2
+alphamap y z ne (app M N) (fr1 , fr2) | e1 | e2 = cong2 mapp e1 e2
+alphamap y z ne (mask m M d) fr = alphamap y z ne M fr
+
+alphalam : (y z : 𝕏) -> ¬ (y == z) -> (M : 𝕃) -> z ♯ M -> lam y M == lam z (subst M y (var z))
+alphalam y z ne M fr with alphamap y z ne M fr | alphaskel y z ne M fr
+alphalam y z ne M fr | e1 | e2 = masksubst' (mapskel y M) (mapskel z (fill (mapskel y M) (var z))) e1 e2
