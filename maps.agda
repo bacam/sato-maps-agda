@@ -109,6 +109,42 @@ data _⊥_eq : 𝕄 -> 𝕄 -> Set where
 ⊥eq (zl n) = zl zero n refl
 ⊥eq (ap b b') = ap b b' refl refl
 
+data _⊥_cases : 𝕄 -> 𝕄 -> Set where
+  zz : zero ⊥ zero cases
+  iz : (m : 𝕄+) -> incl m ⊥ zero cases
+  zi : (n : 𝕄+) -> zero ⊥ incl n cases
+  ll : (m : 𝕄+)(n : 𝕄+) -> incl (inl m) ⊥ incl (inl n) cases
+  lr : (m : 𝕄+)(n : 𝕄+) -> incl (inl m) ⊥ incl (inr n) cases
+  lc : (m : 𝕄+)(n1 n2 : 𝕄+) -> incl (inl m) ⊥ incl (cons n1 n2) cases
+  rl : (m : 𝕄+)(n : 𝕄+) -> incl (inr m) ⊥ incl (inl n) cases
+  rr : (m : 𝕄+)(n : 𝕄+) -> incl (inr m) ⊥ incl (inr n) cases
+  rc : (m : 𝕄+)(n1 n2 : 𝕄+) -> incl (inr m) ⊥ incl (cons n1 n2) cases
+  cl : (m1 m2 : 𝕄+)(n : 𝕄+) -> incl (cons m1 m2) ⊥ incl (inl n) cases
+  cr : (m1 m2 : 𝕄+)(n : 𝕄+) -> incl (cons m1 m2) ⊥ incl (inr n) cases
+  cc : (m1 m2 : 𝕄+)(n1 n2 : 𝕄+) -> incl (cons m1 m2) ⊥ incl (cons n1 n2) cases
+
+⊥cases : {m n : 𝕄} -> m ⊥ n -> m ⊥ n cases
+⊥cases (zr zero) = zz
+⊥cases (zr (incl x)) = iz x
+⊥cases (zl zero) = zz
+⊥cases (zl (incl x)) = zi x
+⊥cases (ap {zero} {zero} {zero} {zero} or or₁) = zz
+⊥cases (ap {zero} {zero} {zero} {incl x} or or₁) = zi (inr x)
+⊥cases (ap {zero} {zero} {incl x} {zero} or or₁) = iz (inr x)
+⊥cases (ap {zero} {zero} {incl x} {incl x₁} or or₁) = rr x x₁
+⊥cases (ap {zero} {incl x} {zero} {zero} or or₁) = zi (inl x)
+⊥cases (ap {zero} {incl x} {zero} {incl x₁} or or₁) = zi (cons x x₁)
+⊥cases (ap {zero} {incl x} {incl x₁} {zero} or or₁) = rl x₁ x
+⊥cases (ap {zero} {incl x} {incl x₁} {incl x₂} or or₁) = rc x₁ x x₂
+⊥cases (ap {incl x} {zero} {zero} {zero} or or₁) = iz (inl x)
+⊥cases (ap {incl x} {zero} {zero} {incl x₁} or or₁) = lr x x₁
+⊥cases (ap {incl x} {zero} {incl x₁} {zero} or or₁) = iz (cons x x₁)
+⊥cases (ap {incl x} {zero} {incl x₁} {incl x₂} or or₁) = cr x x₁ x₂
+⊥cases (ap {incl x} {incl x₁} {zero} {zero} or or₁) = ll x x₁
+⊥cases (ap {incl x} {incl x₁} {zero} {incl x₂} or or₁) = lc x x₁ x₂
+⊥cases (ap {incl x} {incl x₁} {incl x₂} {zero} or or₁) = cl x x₂ x₁
+⊥cases (ap {incl x} {incl x₁} {incl x₂} {incl x₃} or or₁) = cc x x₂ x₁ x₃
+
 mappeq0 : (m n m' n' : 𝕄) -> mapp m n == mapp m' n' -> (m == m') × (n == n')
 mappeq0 zero zero zero zero refl = refl , refl
 mappeq0 zero zero zero (incl x) ()
@@ -158,7 +194,19 @@ sym⊥ (zr m) = zl m
 sym⊥ (zl n) = zr n
 sym⊥ (ap b b') = ap (sym⊥ b) (sym⊥ b')
 
-one⊥ : {m : 𝕄} -> incl one ⊥ m -> m == zero
+onenotmapp : {X : Set} -> (m n : 𝕄) -> .(incl one == mapp m n) -> X
+onenotmapp zero zero ()
+onenotmapp zero (incl _) ()
+onenotmapp (incl _) zero ()
+onenotmapp (incl _) (incl _) ()
+
+one⊥onecases : {X : Set} -> .(incl one ⊥ incl one cases) -> X
+one⊥onecases ()
+
+one⊥one : {X : Set} -> .(incl one ⊥ incl one) -> X
+one⊥one or = one⊥onecases (⊥cases or)
+
+.one⊥ : {m : 𝕄} -> incl one ⊥ m -> m == zero
 one⊥ b with ⊥eq b
 one⊥ b | zr .(incl one) m e = e
 one⊥ b | zl .(incl one) m ()
@@ -179,7 +227,7 @@ mutual
     zb : zero ∣ □
     ob : (incl one) ∣ □
     dmapp : {m n : 𝕄}{M N : 𝕃} -> m ∣ M -> n ∣ N -> mapp m n ∣ app M N
-    dmask : {m n : 𝕄}{N : 𝕃} -> m ∣ N -> (ndiv : n ∣ N) -> m ⊥ n -> m ∣ mask n N ndiv
+    dmask : {m n : 𝕄}{N : 𝕃} -> m ∣ N -> (ndiv : n ∣ N) -> .(m ⊥ n) -> m ∣ mask n N ndiv
 
 zeromask : (M : 𝕃) -> zero ∣ M
 zeromask (var x)      = zv x
@@ -195,11 +243,11 @@ mutual
   fill (dmapp d1 d2)      P = app (fill d1 P) (fill d2 P)
   fill (dmask {m}{n}{N} d1 d2 orth) P = mask n (fill d1 P) (fillok m d1 d2 orth)
 
-  fillok : forall {n}{N}{P} -> (m : 𝕄) -> (d1 : m ∣ N) -> n ∣ N -> m ⊥ n -> n ∣ fill d1 P
+  fillok : forall {n}{N}{P} -> (m : 𝕄) -> (d1 : m ∣ N) -> n ∣ N -> .(m ⊥ n) -> n ∣ fill d1 P
   fillok .zero (zv x) d2 or = d2
   fillok .zero zb d2 or = d2
-  fillok .(incl one) ob d2 or with one⊥ or
-  fillok .(incl one) ob d2 or | refl = zeromask _
+  fillok .(incl one) ob zb or = zeromask _
+  fillok .(incl one) ob ob or = one⊥one or
   fillok ._ (dmapp {m} d1 d2) (dmapp {m'} d3 d4) or = dmapp (fillok _ d1 d3 (⊥left or)) (fillok _ d2 d4 (⊥right {m}{m'} or))
   fillok m (dmask d1 d2 o1) (dmask d3 .d2 o2) or = dmask (fillok _ d1 d3 or) (fillok _ d1 d2 o1) o2
 
@@ -250,7 +298,7 @@ masksubst d .d refl refll = refl
 dmappsubst : forall {m n M N M' N'} -> (d1 : m ∣ M)(d2 : n ∣ N)(d1' : m ∣ M')(d2' : n ∣ N') -> M == M' -> N == N' -> d1 === d1' -> d2 === d2' -> dmapp d1 d2 === dmapp d1' d2'
 dmappsubst d1 d2 .d1 .d2 refl refl refll refll = refll
 
-dmasksubst : forall {m n N N' or} -> {d1 : m ∣ N}{d2 : n ∣ N}{d1' : m ∣ N'}{d2' : n ∣ N'} -> N == N' -> d1 === d1' -> d2 === d2' -> dmask d1 d2 or === dmask d1' d2' or
+dmasksubst : forall {m n N N'} -> .{or : m ⊥ n} -> {d1 : m ∣ N}{d2 : n ∣ N}{d1' : m ∣ N'}{d2' : n ∣ N'} -> N == N' -> d1 === d1' -> d2 === d2' -> dmask d1 d2 or === dmask d1' d2' or
 dmasksubst refl refll refll = refll
 
 mutual
@@ -369,14 +417,14 @@ mutual
   fillzero (app M N) P d with dmappzero M N d
   fillzero (app M N) P .(dmapp d1 d2) | d1 , (d2 , refll) = cong2 app (fillzero M P d1) (fillzero N P d2)
   fillzero (mask m M x) P (dmask d .x or) with fillzero M P d
-  fillzero (mask m M d1) P (dmask d .d1 or) | e = masksubst _ _ e (fillokzero d d1 e)
+  fillzero (mask m M d1) P (dmask d .d1 or) | e = masksubst _ _ e (fillokzero or d d1 e)
 
-  fillokzero : forall {M P m or} -> (d1 : zero ∣ M) -> (d2 : m ∣ M) -> fill d1 P == M -> fillok {m}{M}{P} zero d1 d2 or === d2
-  fillokzero {var .x} (zv x) e x₁ = refll
-  fillokzero {□} zb e x = refll
-  fillokzero {app M N} d e x with dmappzero M N d
-  fillokzero {app M N}{P} .(dmapp d1 d2) (dmapp d3 d4) x₃ | d1 , (d2 , refll) = dmappsubst _ _ _ _ (fillzero M P d1) (fillzero N P d2) (fillokzero d1 d3 (fillzero M P d1)) (fillokzero d2 d4 (fillzero N P d2))
-  fillokzero {mask n N .d'}{P} (dmask d d' x) (dmask e .d' x₁) x₂ = dmasksubst (fillzero N P d) (fillokzero d e (fillzero N P d)) (fillokzero d d' (fillzero N P d))
+  fillokzero : forall {M P m} -> .(or : zero ⊥ m) -> (d1 : zero ∣ M) -> (d2 : m ∣ M) -> fill d1 P == M -> fillok {m}{M}{P} zero d1 d2 or === d2
+  fillokzero {var .x} or (zv x) e x₁ = refll
+  fillokzero {□} or zb e x = refll
+  fillokzero {app M N} or d e x with dmappzero M N d
+  fillokzero {app M N}{P} or .(dmapp d1 d2) (dmapp d3 d4) x₃ | d1 , (d2 , refll) = dmappsubst _ _ _ _ (fillzero M P d1) (fillzero N P d2) (fillokzero _ d1 d3 (fillzero M P d1)) (fillokzero _ d2 d4 (fillzero N P d2))
+  fillokzero {mask n N .d'}{P} or (dmask d d' x) (dmask e .d' x₁) x₂ = dmasksubst (fillzero N P d) (fillokzero _ d e (fillzero N P d)) (fillokzero _ d d' (fillzero N P d))
   
 
 fillzeroeq : (m : 𝕄)(M M' P : 𝕃)(d : m ∣ M') -> m == zero -> M' == M -> fill d P == M
@@ -391,4 +439,5 @@ substskel x M P | e =  fillzeroeq _ _ _ P (mapskel x (skel x M)) e (skelidemp x 
 
 substlameq : (x : 𝕏)(M P : 𝕃) -> subst (lam x M) x P == lam x M
 substlameq x M P with substskel x M P
-substlameq x M P | e = {!e!}
+substlameq x M P | e = {!!}
+
