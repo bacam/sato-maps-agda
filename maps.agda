@@ -1,5 +1,6 @@
 module maps where
 
+-- Generic stuff that probably ought to be replaced with the stdlib
 data _==_ {l}{X : Set l}(x : X) : X -> Set l where
   refl : x == x
 infix 1 _==_
@@ -48,6 +49,7 @@ data Sg (X : Set)(Y : X -> Set) : Set where
   _,_ : (x : X) -> Y x -> Sg X Y
 
 
+-- Parameters are a type along with decidable equality
 postulate 𝕏 : Set
 postulate _=𝕏_ : (x y : 𝕏) -> (x == y) + (¬ (x == y))
 
@@ -56,6 +58,8 @@ xrefl {x} with x =𝕏 x
 xrefl | inl refl = refl
 xrefl | inr e with e refl
 xrefl | inr e | ()
+
+-- Maps
 
 data 𝕄+ : Set where
   one : 𝕄+
@@ -84,6 +88,7 @@ mappview {zero} {zero} = mappzz
 mappview {zero} {incl n} = mappzi n
 mappview {incl m} {zero} = mappiz m
 mappview {incl m} {incl n} = mappii m n
+
 
 data _⊥_ : 𝕄 -> 𝕄 -> Set where
   zr : (m : 𝕄) -> m ⊥ zero
@@ -318,29 +323,16 @@ dmasksubst : forall {m n N N'} -> .{or1 or2 : m ⊥ n} -> {d1 : m ∣ N}{d2 : n 
 dmasksubst {m}{n}{N}{._}{_}{_}{d1}{d2}{d1'}{d2'} refl with ∣unique d1 d1' | ∣unique d2 d2'
 dmasksubst refl | refl | refl = refll
 
-mutual
-  mapzeroskel : (x : 𝕏)(M : 𝕃) -> map x M == zero -> skel x M == M
-  mapzeroskel x (var y) e with x =𝕏 y
-  mapzeroskel x (var .x) () | inl refl
-  mapzeroskel x (var y)  e | inr _    = refl
-  mapzeroskel x □ e = refl
-  mapzeroskel x (app M N) e with mappeqzero (map x M) (map x N) e
-  mapzeroskel x (app M N) e | e1 , e2 with mapzeroskel x M e1 | mapzeroskel x N e2
-  mapzeroskel x (app M N) e | e1 , e2 | e3 | e4 = cong2 app e3 e4
-  mapzeroskel x (mask m M d) e with mapzeroskel x M e
-  mapzeroskel x (mask m M d) e | e1 = masksubst _ _ e1
-  
-  mapzeroskelok : (x : 𝕏)(m : 𝕄)(M : 𝕃)(d : m ∣ M) -> map x M == zero -> skelok {x}{m}{M} d === d
-  mapzeroskelok x .zero .(var y) (zv y) e with x =𝕏 y
-  mapzeroskelok x .zero .(var x) (zv .x) () | inl refl
-  mapzeroskelok x .zero .(var y) (zv y) e | inr x₁ = refll
-  mapzeroskelok x .zero .□ zb e = refll
-  mapzeroskelok x .(incl one) .□ ob e = refll
-  mapzeroskelok x ._ ._ (dmapp {m}{n}{M}{N} d1 d2) e with mappeqzero (map x M) (map x N) e
-  mapzeroskelok x ._ ._ (dmapp d1 d2) e | e1 , e2 with mapzeroskelok x _ _ d1 e1 | mapzeroskelok x _ _ d2 e2
-  mapzeroskelok x ._ ._ (dmapp d1 d2) e | e1 , e2 | e3 | e4 = dmappsubst (skelok d1) (skelok d2) d1 d2 (mapzeroskel _ _ e1) (mapzeroskel _ _ e2) e3 e4
-  mapzeroskelok x m ._ (dmask {.m}{n}{N} d1 d2 or) e with mapzeroskel x N e | mapzeroskelok x _ _ d1 e | mapzeroskelok x _ _ d2 e
-  mapzeroskelok x m ._ (dmask d1 d2 or) e | e1 | e2 | e3 = dmasksubst e1
+mapzeroskel : (x : 𝕏)(M : 𝕃) -> map x M == zero -> skel x M == M
+mapzeroskel x (var y) e with x =𝕏 y
+mapzeroskel x (var .x) () | inl refl
+mapzeroskel x (var y)  e | inr _    = refl
+mapzeroskel x □ e = refl
+mapzeroskel x (app M N) e with mappeqzero (map x M) (map x N) e
+mapzeroskel x (app M N) e | e1 , e2 with mapzeroskel x M e1 | mapzeroskel x N e2
+mapzeroskel x (app M N) e | e1 , e2 | e3 | e4 = cong2 app e3 e4
+mapzeroskel x (mask m M d) e with mapzeroskel x M e
+mapzeroskel x (mask m M d) e | e1 = masksubst _ _ e1
 
 appinj : forall {M N M' N'} -> app M N == app M' N' -> (M == M') × (N == N')
 appinj refl = refl , refl
@@ -471,21 +463,13 @@ dmappzero M N d with dmappinv zero M N d
 dmappzero M N d | m1 , (m2 , (d1 , (d2 , (e1 , e2)))) with mappeqzero m1 m2 e1
 dmappzero M N d | .zero , (.zero , (d1 , (d2 , (e1 , e2)))) | refl , refl = d1 , (d2 , e2)
 
-mutual
-  fillzero : (M P : 𝕃)(d : zero ∣ M) -> fill {zero} d P == M
-  fillzero (var x) P (zv .x) = refl
-  fillzero □ P zb = refl
-  fillzero (app M N) P d with dmappzero M N d
-  fillzero (app M N) P .(dmapp d1 d2) | d1 , (d2 , refll) = cong2 app (fillzero M P d1) (fillzero N P d2)
-  fillzero (mask m M x) P (dmask d .x or) with fillzero M P d
-  fillzero (mask m M d1) P (dmask d .d1 or) | e = masksubst _ _ e
-
-  fillokzero : forall {M P m} -> .(or : zero ⊥ m) -> (d1 : zero ∣ M) -> (d2 : m ∣ M) -> fill d1 P == M -> fillok {m}{M}{P} zero d1 d2 or === d2
-  fillokzero {var .x} or (zv x) e x₁ = refll
-  fillokzero {□} or zb e x = refll
-  fillokzero {app M N} or d e x with dmappzero M N d
-  fillokzero {app M N}{P} or .(dmapp d1 d2) (dmapp d3 d4) x₃ | d1 , (d2 , refll) = dmappsubst _ _ _ _ (fillzero M P d1) (fillzero N P d2) (fillokzero _ d1 d3 (fillzero M P d1)) (fillokzero _ d2 d4 (fillzero N P d2))
-  fillokzero {mask n N .d'}{P} or (dmask d d' x) (dmask e .d' x₁) x₂ = dmasksubst (fillzero N P d)
+fillzero : (M P : 𝕃)(d : zero ∣ M) -> fill {zero} d P == M
+fillzero (var x) P (zv .x) = refl
+fillzero □ P zb = refl
+fillzero (app M N) P d with dmappzero M N d
+fillzero (app M N) P .(dmapp d1 d2) | d1 , (d2 , refll) = cong2 app (fillzero M P d1) (fillzero N P d2)
+fillzero (mask m M x) P (dmask d .x or) with fillzero M P d
+fillzero (mask m M d1) P (dmask d .d1 or) | e = masksubst _ _ e
   
 
 fillzeroeq : (m : 𝕄)(M M' P : 𝕃)(d : m ∣ M') -> m == zero -> M' == M -> fill d P == M
