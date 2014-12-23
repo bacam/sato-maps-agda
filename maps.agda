@@ -568,3 +568,24 @@ alphamap y z ne (mask m M d) fr = alphamap y z ne M fr
 alphalam : (y z : 𝕏) -> ¬ (y == z) -> (M : 𝕃) -> z ♯ M -> lam y M == lam z (subst M y (var z))
 alphalam y z ne M fr with alphamap y z ne M fr | alphaskel y z ne M fr
 alphalam y z ne M fr | e1 | e2 = masksubst' (mapskel y M) (mapskel z (fill (mapskel y M) (var z))) e1 e2
+
+-- Lemma 2
+substlem : forall {x y N P} -> (M : 𝕃) -> ¬ (x == y) -> x ♯ P -> subst (subst M x N) y P == subst (subst M y P) x (subst N y P)
+substlem {x} {y} (var z) ne fr with x =𝕏 z
+substlem {.x} {y}{N}{P} (var x) ne fr | inl refl with substvarneq y x P (\e -> ne (symeq e))
+substlem {.x} {y}{N}{P} (var x) ne fr | inl refl | p rewrite p | substvareq x (subst N y P) = refl
+substlem {x}{y}{N}{P} (var z) ne fr | inr p with y =𝕏 z
+substlem {x}{.y}{N}{P} (var y) ne fr | inr p | inl refl = symeq (substfresh _ _ _ fr)
+substlem {x}{y}{N}{P} (var z) ne fr | inr p1 | inr p2 rewrite substvarneq x z (subst N y P) p1 = refl
+substlem □ ne fr = refl
+substlem {x}{y}{N}{P} (app M M') ne fr with substapp x M M' N | substapp y M M' P
+substlem {x} {y} (app M M') ne fr | refl | refl = cong2 app (substlem M ne fr) (substlem M' ne fr)
+substlem {x}{y}{N}{P} (mask m M d) ne fr with substmask x m M N d | substmask y m M P d
+substlem (mask m M d) ne fr | refl | refl = masksubst _ _ (substlem M ne fr)
+
+lemma3 : forall {z x N P} -> (M : 𝕃) -> ¬ (z == x) -> map z P == zero -> map z M == map z N -> subst (skel z M) x P == skel z N -> subst M x P == N
+lemma3 (var y) ne mz me se = {!!}
+lemma3 {z}{x}{N} □ ne mz me se rewrite mapzeroskel z N (symeq me) = se
+lemma3 {z}{x}{N}{P} (app M M') ne mz me se with substapp x M M' P 
+lemma3 {z}{x}{N}{P} (app M M') ne mz me se | refl = {!!}
+lemma3 (mask m M d) ne mz me se = {!!}
