@@ -12,18 +12,12 @@ open import Relation.Nullary
 postulate 𝕏 : Set
 postulate _=𝕏_ : (x y : 𝕏) -> (x ≡ y) ⊎ (x ≢ y)
 
-xrefl : {x : 𝕏} -> x =𝕏 x ≡ inj₁ refl
-xrefl {x} with x =𝕏 x
-xrefl | inj₁ refl = refl
-xrefl | inj₂ e with e refl
-xrefl | inj₂ e | ()
-
 -- Maps
 
 data 𝕄+ : Set where
   one : 𝕄+
-  inj₁ : 𝕄+ -> 𝕄+
-  inj₂ : 𝕄+ -> 𝕄+
+  inl : 𝕄+ -> 𝕄+
+  inr : 𝕄+ -> 𝕄+
   cons : 𝕄+ -> 𝕄+ -> 𝕄+
 
 data 𝕄 : Set where
@@ -32,14 +26,14 @@ data 𝕄 : Set where
 
 mapp : 𝕄 -> 𝕄 -> 𝕄
 mapp    zero     zero  = zero
-mapp (incl m)    zero  = incl (inj₁ m)
-mapp    zero  (incl n) = incl (inj₂ n)
+mapp (incl m)    zero  = incl (inl m)
+mapp    zero  (incl n) = incl (inr n)
 mapp (incl m) (incl n) = incl (cons m n)
 
 data Mapp : 𝕄 -> 𝕄 -> 𝕄 -> Set where
   mappzz : Mapp zero zero zero
-  mappiz : (m : 𝕄+) -> Mapp (incl m) zero (incl (inj₁ m))
-  mappzi : (n : 𝕄+) -> Mapp zero (incl n) (incl (inj₂ n))
+  mappiz : (m : 𝕄+) -> Mapp (incl m) zero (incl (inl m))
+  mappzi : (n : 𝕄+) -> Mapp zero (incl n) (incl (inr n))
   mappii : (m : 𝕄+) -> (n : 𝕄+) -> Mapp (incl m) (incl n) (incl (cons m n))
 
 mappview : forall {m n} -> Mapp m n (mapp m n)
@@ -55,6 +49,7 @@ data _⊥_ : 𝕄 -> 𝕄 -> Set where
   ap : {m n m' n' : 𝕄} -> m ⊥ n -> m' ⊥ n' -> mapp m m' ⊥ mapp n n'
 
 -- The proofs are orthogonality are not unique :(
+-- We'll use irrelevance to get around this later
 ⊥notunique : ¬ ((m : 𝕄)(n : 𝕄)(p1 : m ⊥ n)(p2 : m ⊥ n) -> p1 ≡ p2)
 ⊥notunique f with f zero zero (zr zero) (zl zero)
 ⊥notunique f | ()
@@ -77,14 +72,14 @@ data _⊥_cases : 𝕄 -> 𝕄 -> Set where
   zz : zero ⊥ zero cases
   iz : (m : 𝕄+) -> incl m ⊥ zero cases
   zi : (n : 𝕄+) -> zero ⊥ incl n cases
-  ll : (m : 𝕄+)(n : 𝕄+) -> incl (inj₁ m) ⊥ incl (inj₁ n) cases
-  lr : (m : 𝕄+)(n : 𝕄+) -> incl (inj₁ m) ⊥ incl (inj₂ n) cases
-  lc : (m : 𝕄+)(n1 n2 : 𝕄+) -> incl (inj₁ m) ⊥ incl (cons n1 n2) cases
-  rl : (m : 𝕄+)(n : 𝕄+) -> incl (inj₂ m) ⊥ incl (inj₁ n) cases
-  rr : (m : 𝕄+)(n : 𝕄+) -> incl (inj₂ m) ⊥ incl (inj₂ n) cases
-  rc : (m : 𝕄+)(n1 n2 : 𝕄+) -> incl (inj₂ m) ⊥ incl (cons n1 n2) cases
-  cl : (m1 m2 : 𝕄+)(n : 𝕄+) -> incl (cons m1 m2) ⊥ incl (inj₁ n) cases
-  cr : (m1 m2 : 𝕄+)(n : 𝕄+) -> incl (cons m1 m2) ⊥ incl (inj₂ n) cases
+  ll : (m : 𝕄+)(n : 𝕄+) -> incl (inl m) ⊥ incl (inl n) cases
+  lr : (m : 𝕄+)(n : 𝕄+) -> incl (inl m) ⊥ incl (inr n) cases
+  lc : (m : 𝕄+)(n1 n2 : 𝕄+) -> incl (inl m) ⊥ incl (cons n1 n2) cases
+  rl : (m : 𝕄+)(n : 𝕄+) -> incl (inr m) ⊥ incl (inl n) cases
+  rr : (m : 𝕄+)(n : 𝕄+) -> incl (inr m) ⊥ incl (inr n) cases
+  rc : (m : 𝕄+)(n1 n2 : 𝕄+) -> incl (inr m) ⊥ incl (cons n1 n2) cases
+  cl : (m1 m2 : 𝕄+)(n : 𝕄+) -> incl (cons m1 m2) ⊥ incl (inl n) cases
+  cr : (m1 m2 : 𝕄+)(n : 𝕄+) -> incl (cons m1 m2) ⊥ incl (inr n) cases
   cc : (m1 m2 : 𝕄+)(n1 n2 : 𝕄+) -> incl (cons m1 m2) ⊥ incl (cons n1 n2) cases
 
 ⊥cases : {m n : 𝕄} -> m ⊥ n -> m ⊥ n cases
@@ -93,14 +88,14 @@ data _⊥_cases : 𝕄 -> 𝕄 -> Set where
 ⊥cases (zl zero) = zz
 ⊥cases (zl (incl x)) = zi x
 ⊥cases (ap {zero} {zero} {zero} {zero} or or₁) = zz
-⊥cases (ap {zero} {zero} {zero} {incl x} or or₁) = zi (inj₂ x)
-⊥cases (ap {zero} {zero} {incl x} {zero} or or₁) = iz (inj₂ x)
+⊥cases (ap {zero} {zero} {zero} {incl x} or or₁) = zi (inr x)
+⊥cases (ap {zero} {zero} {incl x} {zero} or or₁) = iz (inr x)
 ⊥cases (ap {zero} {zero} {incl x} {incl x₁} or or₁) = rr x x₁
-⊥cases (ap {zero} {incl x} {zero} {zero} or or₁) = zi (inj₁ x)
+⊥cases (ap {zero} {incl x} {zero} {zero} or or₁) = zi (inl x)
 ⊥cases (ap {zero} {incl x} {zero} {incl x₁} or or₁) = zi (cons x x₁)
 ⊥cases (ap {zero} {incl x} {incl x₁} {zero} or or₁) = rl x₁ x
 ⊥cases (ap {zero} {incl x} {incl x₁} {incl x₂} or or₁) = rc x₁ x x₂
-⊥cases (ap {incl x} {zero} {zero} {zero} or or₁) = iz (inj₁ x)
+⊥cases (ap {incl x} {zero} {zero} {zero} or or₁) = iz (inl x)
 ⊥cases (ap {incl x} {zero} {zero} {incl x₁} or or₁) = lr x x₁
 ⊥cases (ap {incl x} {zero} {incl x₁} {zero} or or₁) = iz (cons x x₁)
 ⊥cases (ap {incl x} {zero} {incl x₁} {incl x₂} or or₁) = cr x x₁ x₂
