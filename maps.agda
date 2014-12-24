@@ -153,26 +153,11 @@ sym⊥ (zr m) = zl m
 sym⊥ (zl n) = zr n
 sym⊥ (ap b b') = ap (sym⊥ b) (sym⊥ b')
 
-onenotmapp : {X : Set} -> (m n : 𝕄) -> .(incl one ≡ mapp m n) -> X
-onenotmapp zero zero ()
-onenotmapp zero (incl _) ()
-onenotmapp (incl _) zero ()
-onenotmapp (incl _) (incl _) ()
-
 one⊥onecases : {X : Set} -> .(incl one ⊥ incl one cases) -> X
 one⊥onecases ()
 
 one⊥one : {X : Set} -> .(incl one ⊥ incl one) -> X
 one⊥one or = one⊥onecases (⊥cases or)
-
-.one⊥ : {m : 𝕄} -> incl one ⊥ m -> m ≡ zero
-one⊥ b with ⊥eq b
-one⊥ b | zr .(incl one) m e = e
-one⊥ b | zl .(incl one) m ()
-one⊥ b | ap {zero} {m' = zero} _ _ () _
-one⊥ b | ap {zero} {m' = incl _} _ _ () _
-one⊥ b | ap {incl _} {m' = zero} _ _ () _
-one⊥ b | ap {incl _} {m' = incl _} _ _ () _
 
 mutual
   data 𝕃 : Set where
@@ -269,13 +254,6 @@ mapskel x (mask m M d) = dmask (mapskel x M) (skelok d) (mapdiv⊥ x d)
 masksubst : forall {m M M'} -> (d : m ∣ M)(d' : m ∣ M') -> M ≡ M' -> mask m M d ≡ mask m M' d'
 masksubst d d' refl with ∣unique d d'
 masksubst d .d refl | refl = refl
-
-dmappsubst : forall {m n M N M' N'} -> (d1 : m ∣ M)(d2 : n ∣ N)(d1' : m ∣ M')(d2' : n ∣ N') -> M ≡ M' -> N ≡ N' -> d1 ≅ d1' -> d2 ≅ d2' -> dmapp d1 d2 ≅ dmapp d1' d2'
-dmappsubst d1 d2 .d1 .d2 refl refl refll refll = refll
-
-dmasksubst : forall {m n N N'} -> .{or1 or2 : m ⊥ n} -> {d1 : m ∣ N}{d2 : n ∣ N}{d1' : m ∣ N'}{d2' : n ∣ N'} -> N ≡ N' -> dmask d1 d2 or1 ≅ dmask d1' d2' or2
-dmasksubst {m}{n}{N}{._}{_}{_}{d1}{d2}{d1'}{d2'} refl with ∣unique d1 d1' | ∣unique d2 d2'
-dmasksubst refl | refl | refl = refll
 
 mapzeroskel : (x : 𝕏)(M : 𝕃) -> map x M ≡ zero -> skel x M ≡ M
 mapzeroskel x (var y) e with x =𝕏 y
