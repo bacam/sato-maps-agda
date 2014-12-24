@@ -584,8 +584,33 @@ substlem {x}{y}{N}{P} (mask m M d) ne fr with substmask x m M N d | substmask y 
 substlem (mask m M d) ne fr | refl | refl = masksubst _ _ (substlem M ne fr)
 
 lemma3 : forall {z x N P} -> (M : 𝕃) -> ¬ (z == x) -> map z P == zero -> map z M == map z N -> subst (skel z M) x P == skel z N -> subst M x P == N
-lemma3 (var y) ne mz me se = {!!}
+lemma3 {z}{x} (var y) ne mz me se with x =𝕏 y
+lemma3 {z} (var x) ne mz me se | inl refl with z =𝕏 x
+lemma3 (var z) ne mz me se | inl refl | inl refl with ne refl
+lemma3 (var z) ne mz me se | inl refl | inl refl | ()
+lemma3 {z}{.x}{N}{P} (var x) ne mz me se | inl refl | inr x₁ rewrite substvareq x P | mapzeroskel z N (symeq me) = se
+lemma3 {z}(var y) ne mz me se | inr x₁ with z =𝕏 y
+lemma3 {.z} {x} {var y} (var z) ne mz me se | inr x₂ | inl refl with z =𝕏 y
+lemma3 {.z} {x} {var .z} (var z) ne mz me se | inr x₂ | inl refl | inl refl = refl
+lemma3 {.z} {x₁} {var y} (var z) ne mz me () | inr x₂ | inl refl | inr x
+lemma3 {.z} {x} {□} (var z) ne mz () se | inr x₂ | inl refl
+lemma3 {.z} {x} {app N N₁} (var z) ne mz me () | inr x₂ | inl refl
+lemma3 {.z} {x} {mask m N x₁} (var z) ne mz me () | inr x₂ | inl refl
+lemma3 {z}{x}{N}{P}(var y) ne mz me se | inr x₂ | inr p rewrite substvarneq x y P x₂ | se = mapzeroskel z N (symeq me)
 lemma3 {z}{x}{N} □ ne mz me se rewrite mapzeroskel z N (symeq me) = se
 lemma3 {z}{x}{N}{P} (app M M') ne mz me se with substapp x M M' P 
-lemma3 {z}{x}{N}{P} (app M M') ne mz me se | refl = {!!}
-lemma3 (mask m M d) ne mz me se = {!!}
+lemma3 {z} {x} {var y} (app M M') ne mz me se | refl with z =𝕏 y
+lemma3 {z} {x} {var .z} (app M M') ne mz me () | refl | inl refl
+lemma3 {z} {x₁} {var y} (app M M') ne mz me () | refl | inr x
+lemma3 {z} {x} {□} (app M M') ne mz me () | refl
+lemma3 {z} {x} {app N N'} (app M M') ne mz me se | refl with mappeq0 (map z M) (map z M') (map z N) (map z N') me | appinj se
+lemma3 {z} {x} {app N N'} (app M M') ne mz me se | refl | e1 , e2 | e3 , e4 = cong2 app (lemma3 M ne mz e1 e3) (lemma3 M' ne mz e2 e4)
+lemma3 {z} {x} {mask m N x₁} (app M M') ne mz me () | refl
+lemma3 {z}{x}{N}{P} (mask m M d) ne mz me se with substmask x m (skel z M) P (skelok d)
+lemma3 {z} {x} {var y} (mask m M d) ne mz me se | e with z =𝕏 y
+lemma3 {z} {x} {var .z} (mask m M d) ne mz me () | e | inl refl
+lemma3 {z} {x₁} {var y} (mask m M d) ne mz me () | e | inr x
+lemma3 {z} {x} {□} (mask m M d) ne mz me () | e
+lemma3 {z} {x} {app N N₁} (mask m M d) ne mz me () | e
+lemma3 {z} {x} {mask n N d'} (mask m M d) ne mz me se | e with maskinj' se
+lemma3 {z} {x} {mask .m N d'} (mask m M d) ne mz me se | e | refl , e2 = masksubst _ _ (lemma3 M ne mz me e2)
