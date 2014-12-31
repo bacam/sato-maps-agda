@@ -1,10 +1,10 @@
 An Agda implementation of the "maps" representation of lambda terms, as
 described in:
 
-  Viewing λ-terms through maps
-  Masahiko Sato, Randy Pollack, Helmut Schwichtenberg and Takafumi Sakurai
-  Indagationes Mathematicae 24 (2013) 1073–1104
-  <http://dx.doi.org/10.1016/j.indag.2013.08.003>
+>  Viewing λ-terms through maps  
+>  Masahiko Sato, Randy Pollack, Helmut Schwichtenberg and Takafumi Sakurai  
+>  Indagationes Mathematicae 24 (2013) 1073–1104  
+>  <http://dx.doi.org/10.1016/j.indag.2013.08.003>
 
 This is just the maps representation, but uses Agda's support for
 induction-induction and recursion-recursion definitions to bypass the symbolic
