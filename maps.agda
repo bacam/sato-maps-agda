@@ -30,18 +30,39 @@ mapp (incl m)    zero  = incl (inl m)
 mapp    zero  (incl n) = incl (inr n)
 mapp (incl m) (incl n) = incl (cons m n)
 
-data Mapp : 𝕄 -> 𝕄 -> 𝕄 -> Set where
-  mappzz : Mapp zero zero zero
-  mappiz : (m : 𝕄+) -> Mapp (incl m) zero (incl (inl m))
-  mappzi : (n : 𝕄+) -> Mapp zero (incl n) (incl (inr n))
-  mappii : (m : 𝕄+) -> (n : 𝕄+) -> Mapp (incl m) (incl n) (incl (cons m n))
 
-mappview : forall {m n} -> Mapp m n (mapp m n)
-mappview {zero} {zero} = mappzz
-mappview {zero} {incl n} = mappzi n
-mappview {incl m} {zero} = mappiz m
-mappview {incl m} {incl n} = mappii m n
+mappinj : (m n m' n' : 𝕄) -> mapp m n ≡ mapp m' n' -> (m ≡ m') × (n ≡ n')
+mappinj zero zero zero zero refl = refl , refl
+mappinj zero zero zero (incl x) ()
+mappinj zero (incl x) zero zero ()
+mappinj zero (incl x) zero (incl .x) refl = refl , refl
+mappinj zero zero (incl x) zero ()
+mappinj zero zero (incl x) (incl x₁) ()
+mappinj zero (incl x) (incl x₁) zero ()
+mappinj zero (incl x) (incl x₁) (incl x₂) ()
+mappinj (incl x) zero zero zero ()
+mappinj (incl x) zero zero (incl x₁) ()
+mappinj (incl x) zero (incl .x) zero refl = refl , refl
+mappinj (incl x) zero (incl x₁) (incl x₂) ()
+mappinj (incl x) (incl x₁) zero zero ()
+mappinj (incl x) (incl x₁) zero (incl x₂) ()
+mappinj (incl x) (incl x₁) (incl x₂) zero ()
+mappinj (incl x) (incl x₁) (incl .x) (incl .x₁) refl = refl , refl
 
+mappeqzero : (m n : 𝕄) -> mapp m n ≡ zero -> (m ≡ zero) × (n ≡ zero)
+mappeqzero zero zero refl = refl , refl
+mappeqzero zero (incl x) ()
+mappeqzero (incl x) zero ()
+mappeqzero (incl x) (incl x₁) ()
+
+mappeql : {m n m' n' : 𝕄} -> mapp m n ≡ mapp m' n' -> m ≡ m'
+mappeql {m}{n}{m'}{n'} e = proj₁ (mappinj m n m' n' e)
+
+mappeqr : {m n m' n' : 𝕄} -> mapp m n ≡ mapp m' n' -> n ≡ n'
+mappeqr {m}{n}{m'}{n'} e = proj₂ (mappinj m n m' n' e)
+
+
+-- Orthogonality relation
 
 data _⊥_ : 𝕄 -> 𝕄 -> Set where
   zr : (m : 𝕄) -> m ⊥ zero
@@ -58,16 +79,21 @@ data _⊥_ : 𝕄 -> 𝕄 -> Set where
 ⊥notunique' f with f zero zero (zr zero) (ap (zl zero) (zl zero))
 ⊥notunique' f | ()
 
+-- For inversion we want to be able to drop back to reasoning on equalities...
 data _⊥_eq : 𝕄 -> 𝕄 -> Set where
   zr : (m n : 𝕄) -> n ≡ zero -> m ⊥ n eq
   zl : (m n : 𝕄) -> m ≡ zero -> m ⊥ n eq
-  ap : {m n m' n' m'' n'' : 𝕄} -> m ⊥ n -> m' ⊥ n' -> m'' ≡ mapp m m' -> n'' ≡ mapp n n' -> m'' ⊥ n'' eq
+  ap : {m n m' n' m'' n'' : 𝕄} -> m ⊥ n -> m' ⊥ n' ->
+          m'' ≡ mapp m m' -> n'' ≡ mapp n n' ->
+          m'' ⊥ n'' eq
 
 ⊥eq : {m n : 𝕄} -> m ⊥ n -> m ⊥ n eq
 ⊥eq (zr m) = zr m zero refl
 ⊥eq (zl n) = zl zero n refl
 ⊥eq (ap b b') = ap b b' refl refl
 
+-- ...but I had trouble using that with irrelevance, so let's have a
+-- gratuitious case analysis too.
 data _⊥_cases : 𝕄 -> 𝕄 -> Set where
   zz : zero ⊥ zero cases
   iz : (m : 𝕄+) -> incl m ⊥ zero cases
@@ -104,42 +130,12 @@ data _⊥_cases : 𝕄 -> 𝕄 -> Set where
 ⊥cases (ap {incl x} {incl x₁} {incl x₂} {zero} or or₁) = cl x x₂ x₁
 ⊥cases (ap {incl x} {incl x₁} {incl x₂} {incl x₃} or or₁) = cc x x₂ x₁ x₃
 
-mappeq0 : (m n m' n' : 𝕄) -> mapp m n ≡ mapp m' n' -> (m ≡ m') × (n ≡ n')
-mappeq0 zero zero zero zero refl = refl , refl
-mappeq0 zero zero zero (incl x) ()
-mappeq0 zero (incl x) zero zero ()
-mappeq0 zero (incl x) zero (incl .x) refl = refl , refl
-mappeq0 zero zero (incl x) zero ()
-mappeq0 zero zero (incl x) (incl x₁) ()
-mappeq0 zero (incl x) (incl x₁) zero ()
-mappeq0 zero (incl x) (incl x₁) (incl x₂) ()
-mappeq0 (incl x) zero zero zero ()
-mappeq0 (incl x) zero zero (incl x₁) ()
-mappeq0 (incl x) zero (incl .x) zero refl = refl , refl
-mappeq0 (incl x) zero (incl x₁) (incl x₂) ()
-mappeq0 (incl x) (incl x₁) zero zero ()
-mappeq0 (incl x) (incl x₁) zero (incl x₂) ()
-mappeq0 (incl x) (incl x₁) (incl x₂) zero ()
-mappeq0 (incl x) (incl x₁) (incl .x) (incl .x₁) refl = refl , refl
-
-mappeqzero : (m n : 𝕄) -> mapp m n ≡ zero -> (m ≡ zero) × (n ≡ zero)
-mappeqzero zero zero refl = refl , refl
-mappeqzero zero (incl x) ()
-mappeqzero (incl x) zero ()
-mappeqzero (incl x) (incl x₁) ()
-
-mappeql : {m n m' n' : 𝕄} -> mapp m n ≡ mapp m' n' -> m ≡ m'
-mappeql {m}{n}{m'}{n'} e = proj₁ (mappeq0 m n m' n' e)
-
-mappeqr : {m n m' n' : 𝕄} -> mapp m n ≡ mapp m' n' -> n ≡ n'
-mappeqr {m}{n}{m'}{n'} e = proj₂ (mappeq0 m n m' n' e)
-
 ⊥eqsp : (m n m' n' : 𝕄) -> mapp m m' ⊥ mapp n n' eq -> (m ⊥ n) × (m' ⊥ n')
 ⊥eqsp m n m' n' (zr .(mapp m m') .(mapp n n') e) with mappeqzero n n' e
 ⊥eqsp m .zero m' .zero (zr .(mapp m m') .(mapp zero zero) e) | refl , refl = zr m , zr m'
 ⊥eqsp m n m' n' (zl .(mapp m m') .(mapp n n') e) with mappeqzero m m' e
 ⊥eqsp .zero n .zero n' (zl .(mapp zero zero) .(mapp n n') e) | refl , refl = zl n , zl n'
-⊥eqsp m n m' n' (ap {m0}{n0}{m0'}{n0'} o1 o2 e1 e2)  with mappeq0 m m' m0 m0' e1 | mappeq0 n n' n0 n0' e2
+⊥eqsp m n m' n' (ap {m0}{n0}{m0'}{n0'} o1 o2 e1 e2)  with mappinj m m' m0 m0' e1 | mappinj n n' n0 n0' e2
 ⊥eqsp m n m' n' (ap o1 o2 e1 e2) | refl , refl | refl , refl = o1 , o2
 
 ⊥left : {m n m' n' : 𝕄} -> mapp m m' ⊥ mapp n n' -> m ⊥ n
@@ -159,6 +155,8 @@ one⊥onecases ()
 one⊥one : {X : Set} -> .(incl one ⊥ incl one) -> X
 one⊥one or = one⊥onecases (⊥cases or)
 
+-- The representation of λ-terms, including the divisibility relation
+
 mutual
   data 𝕃 : Set where
     var  : 𝕏 -> 𝕃
@@ -171,10 +169,14 @@ mutual
     zb : zero ∣ □
     ob : (incl one) ∣ □
     dmapp : {m n : 𝕄}{M N : 𝕃} -> m ∣ M -> n ∣ N -> mapp m n ∣ app M N
-    dmask : {m n : 𝕄}{N : 𝕃} -> m ∣ N -> (ndiv : n ∣ N) -> .(m ⊥ n) -> m ∣ mask n N ndiv
+    dmask : {m n : 𝕄}{N : 𝕃} -> m ∣ N -> (ndiv : n ∣ N) -> .(m ⊥ n) ->
+              m ∣ mask n N ndiv
 
+-- Thanks to the irrelevance of orthogonality in dmask, divisibility proofs
+-- are unique.
 mutual
-  dmappunique : forall {M N m0 m n} -> (y : m0 ∣ app M N) -> m0 ≡ mapp m n -> (d1 : m ∣ M) -> (d2 : n ∣ N) -> dmapp d1 d2 ≅ y
+  dmappunique : forall {M N m0 m n} -> (y : m0 ∣ app M N) -> m0 ≡ mapp m n ->
+                  (d1 : m ∣ M) -> (d2 : n ∣ N) -> dmapp d1 d2 ≅ y
   dmappunique {M}{N}{._}{m'}{n'} (dmapp {m}{n} y y₁) e d1 d2 with mappeql {m}{n}{m'}{n'} e | mappeqr {m}{n}{m'}{n'} e
   dmappunique (dmapp y y₁) e d1 d2 | refl | refl with ∣unique d1 y | ∣unique d2 y₁
   dmappunique (dmapp y y₁) e .y .y₁ | refl | refl | refl | refl = refll
@@ -325,7 +327,7 @@ mapskelinj {x} {M = app M N} {var y} e1 e2 with x =𝕏 y
 mapskelinj {x} {app M N} {var .x} e1 () | inj₁ refl
 mapskelinj {x} {app M N} {var y} e1 () | inj₂ x₁
 mapskelinj {M = app M N} {□} e1 ()
-mapskelinj {x} {M = app M N} {app M' N'} e1 e2 with mappeq0 (map x M) (map x N) (map x M') (map x N') e1 | appinj e2
+mapskelinj {x} {M = app M N} {app M' N'} e1 e2 with mappinj (map x M) (map x N) (map x M') (map x N') e1 | appinj e2
 mapskelinj {M = app M N} {app M' N'} e1 e2 | e3 , e4 | e5 , e6 = cong₂ app (mapskelinj e3 e5) (mapskelinj e4 e6)
 mapskelinj {M = app M N} {mask m N₁ x₁} e1 ()
 mapskelinj {x}{M = mask m M x₁} {var y} e1 e2 with x =𝕏 y 
@@ -535,7 +537,7 @@ lemma3 {z} {x} {var y} (app M M') ne mz me se | refl with z =𝕏 y
 lemma3 {z} {x} {var .z} (app M M') ne mz me () | refl | inj₁ refl
 lemma3 {z} {x₁} {var y} (app M M') ne mz me () | refl | inj₂ x
 lemma3 {z} {x} {□} (app M M') ne mz me () | refl
-lemma3 {z} {x} {app N N'} (app M M') ne mz me se | refl with mappeq0 (map z M) (map z M') (map z N) (map z N') me | appinj se
+lemma3 {z} {x} {app N N'} (app M M') ne mz me se | refl with mappinj (map z M) (map z M') (map z N) (map z N') me | appinj se
 lemma3 {z} {x} {app N N'} (app M M') ne mz me se | refl | e1 , e2 | e3 , e4 = cong₂ app (lemma3 M ne mz e1 e3) (lemma3 M' ne mz e2 e4)
 lemma3 {z} {x} {mask m N x₁} (app M M') ne mz me () | refl
 lemma3 {z}{x}{N}{P} (mask m M d) ne mz me se with substmask x m (skel z M) P (skelok d)
