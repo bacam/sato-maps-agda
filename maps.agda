@@ -546,3 +546,82 @@ lemma3 {z} {x} {□} (mask m M d) ne mz me () | e
 lemma3 {z} {x} {app N N₁} (mask m M d) ne mz me () | e
 lemma3 {z} {x} {mask n N d'} (mask m M d) ne mz me se | e with maskinj' se
 lemma3 {z} {x} {mask .m N d'} (mask m M d) ne mz me se | e | refl , e2 = masksubst _ _ (lemma3 M ne mz me e2)
+
+
+data _-βη->_ : 𝕃 -> 𝕃 -> Set where
+  β : (m : 𝕄)(M N : 𝕃)(d : m ∣ M) -> app (mask m M d) N -βη-> fill d N
+  η : (M : 𝕃) -> mask (incl (inr one)) (app M □) (dmapp (zeromask M) ob) -βη-> M
+  appl : (M N M' : 𝕃) -> M -βη-> M' -> app M N -βη-> app M' N
+  appr : (M N N' : 𝕃) -> N -βη-> N' -> app M N -βη-> app M N'
+  ξ : (x : 𝕏)(M N : 𝕃) -> M -βη-> N -> lam x M -βη-> lam x N
+
+-- Check that the parameter form of η holds
+
+ηparam : (x : 𝕏)(M : 𝕃) -> x ♯ M -> lam x (app M (var x)) -βη-> M
+ηparam x M fr with freshmap x M fr | mapzeroskel x M (freshmap x M fr) | x =𝕏 x
+ηparam x M fr | e1 | e2 | inj₁ refl = substeq (\N -> N -βη-> M) (masksubst' _ _ (substeq (\m -> incl (inr one) ≡ mapp m (incl one)) (sym e1) refl) (substeq (\N -> app M □ ≡ app N □) (sym e2) refl)) (η M)
+ηparam x M fr | e1 | e2 | inj₂ p with p refl
+ηparam x M fr | e1 | e2 | inj₂ p | ()
+
+-- and β is trivial from the definitions of lam and subst
+
+βparam : (x : 𝕏)(M K : 𝕃) -> app (lam x M) K -βη-> subst M x K
+βparam x M K = β _ _ _ _
+
+-- The example that the obvious name-free-ξ doesn't work, because the rhs isn't
+-- well formed.
+
+name-free-ξ : Set
+name-free-ξ = (m : 𝕄)(M N : 𝕃)(d : m ∣ M) -> M -βη-> N -> Σ (m ∣ N) \d' -> mask m M d -βη-> mask m N d'
+
+name-free-ξ-bad : ¬ name-free-ξ
+name-free-ξ-bad nfξ =  bad (proj₁ (nfξ (incl (inr one))
+                                   (app (mask (incl one) □ ob) □)
+                                   □
+                                   (dmapp (dmask zb ob (zl (incl one))) ob)
+                                   (β _ _ _ _)))  where
+  bad : ¬ (incl (inr one) ∣ □)
+  bad ()
+
+-- Here is a version of the ξ rule with a name-free conclusion
+
+mapfill : (x : 𝕏)(m : 𝕄)(M : 𝕃)(d : m ∣ M) -> x ♯ M -> map x (fill d (var x)) ≡ m
+mapfill x .zero .(var y) (zv y) fr with x =𝕏 y
+mapfill x .zero .(var x) (zv .x) () | inj₁ refl
+mapfill x .zero .(var y) (zv  y) fr | inj₂ _ = refl
+mapfill x .zero .□ zb fr = refl
+mapfill x .(incl one) .□ ob fr with x =𝕏 x
+mapfill x .(incl one) .□ ob fr | inj₁ refl = refl
+mapfill x .(incl one) .□ ob fr | inj₂ y with y refl
+mapfill x .(incl one) .□ ob fr | inj₂ y | ()
+mapfill x ._ ._ (dmapp d d') (fr₁ , fr₂) with mapfill x _ _ d fr₁ | mapfill x _ _ d' fr₂
+mapfill x ._ ._ (dmapp {m}{n} d d') (fr₁ , fr₂) | e1 | e2 =  substeq (\m' -> mapp m' (map x (fill d' (var x))) ≡ mapp m n) (sym e1) (substeq (\n' -> mapp m n' ≡ mapp m n) (sym e2) refl)
+mapfill x m ._ (dmask d d' or) fr = mapfill x m _ d fr
+
+skelfill : (x : 𝕏)(m : 𝕄)(M : 𝕃)(d : m ∣ M) -> x ♯ M -> skel x (fill d (var x)) ≡ M
+skelfill x .zero .(var y) (zv y) fr with x =𝕏 y
+skelfill x .zero .(var x) (zv .x) () | inj₁ refl
+skelfill x .zero .(var y) (zv  y) fr | inj₂ _ = refl
+skelfill x .zero .□ zb fr = refl
+skelfill x .(incl one) .□ ob fr with x =𝕏 x
+skelfill x .(incl one) .□ ob fr | inj₁ refl = refl
+skelfill x .(incl one) .□ ob fr | inj₂ y with y refl
+skelfill x .(incl one) .□ ob fr | inj₂ y | ()
+skelfill x ._ ._ (dmapp d d') (fr₁ , fr₂) with skelfill x _ _ d fr₁ | skelfill x _ _ d' fr₂
+skelfill x ._ ._ (dmapp {m}{n}{M}{N} d d') (fr₁ , fr₂) | e1 | e2 = substeq (\M' -> app M' (skel x (fill d' (var x))) ≡ app M N) (sym e1) (substeq (\N' -> app M N' ≡ app M N) (sym e2) refl)
+skelfill x m ._ (dmask d d' or) fr = masksubst _ _ (skelfill x _ _ d fr)
+
+name-free-concl-ξ : (x : 𝕏)(m n : 𝕄)(M N : 𝕃) -> 
+                    (d : m ∣ M)(d' : n ∣ N) ->
+                    x ♯ M -> x ♯ N ->
+                    fill d (var x) -βη-> fill d' (var x) ->
+                    mask m M d -βη-> mask n N d'
+name-free-concl-ξ x m n M N d d' fr1 fr2 be =
+    substeq (\M' -> M' -βη-> mask n N d') tm1eq
+    (substeq (\N' -> lam x (fill d (var x)) -βη-> N') tm2eq deriv) where
+  tm1eq : lam x (fill d (var x)) ≡ mask m M d
+  tm1eq = masksubst' _ d (mapfill x m M d fr1) (skelfill x m M d fr1)
+  tm2eq : lam x (fill d' (var x)) ≡ mask n N d'
+  tm2eq = masksubst' _ d' (mapfill x n N d' fr2) (skelfill x n N d' fr2)
+  deriv : lam x (fill d (var x)) -βη-> lam x (fill d' (var x))
+  deriv = ξ x (fill d (var x)) (fill d' (var x)) be
